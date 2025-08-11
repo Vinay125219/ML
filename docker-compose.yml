@@ -8,7 +8,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -28,8 +28,8 @@ services:
       - "3001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - /grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - /grafana/datasources:/etc/grafana/provisioning/datasources
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -46,9 +46,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./models:/app/models
-      - ./data:/app/data
-      - ./housinglogs:/app/housinglogs
+      - /models:/app/models
+      - /data:/app/data
+      - /housinglogs:/app/housinglogs
       - shared_data:/app/shared
     environment:
       - PYTHONPATH=/app
@@ -66,7 +66,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./mlruns:/app/mlruns
+      - /mlruns:/app/mlruns
     working_dir: /app
     command: >
       bash -c "pip install mlflow &&

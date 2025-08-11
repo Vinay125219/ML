@@ -3,7 +3,7 @@ import json
 from typing import Optional, Dict
 
 # Shared directory for cross-service artifacts (mounted via docker-compose)
-SHARED_DIR = os.environ.get("SHARED_DIR", "./shared")
+SHARED_DIR = os.environ.get("SHARED_DIR", "shared")
 
 
 def _ensure_dir(path: str) -> None:

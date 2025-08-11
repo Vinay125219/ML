@@ -3,7 +3,6 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 
-
 def load_and_save():
     # Load the data
     data = fetch_california_housing(as_frame=True)

@@ -10,10 +10,10 @@ import joblib
 import os
 
 # Ensure MLflow logs locally inside the repo (works in CI)
-mlflow.set_tracking_uri("file:./mlruns")
+mlflow.set_tracking_uri("file:/mlruns")
 # Ensure model registry also uses local file store in CI
 try:
-    mlflow.set_registry_uri("file:./mlruns")
+    mlflow.set_registry_uri("file:/mlruns")
 except Exception:
     pass
 mlflow.set_experiment("housing_price_prediction")
