@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 
 # Ensure MLflow logs locally inside the repo (works in CI and scripts)
 mlflow.set_tracking_uri("file:./mlruns")
+# Set the experiment name to match the existing one
+mlflow.set_experiment("housing_price_prediction")
 
 
 class ModelPerformanceMonitor:
@@ -182,6 +184,7 @@ class ModelRetrainer:
             if data_path and os.path.exists(data_path):
                 logger.info(f"Using custom data path: {data_path}")
                 df = pd.read_csv(data_path)
+                logger.info(f"Loaded custom data with shape: {df.shape}")
             else:
                 # Use default data
                 default_path = "data/housing.csv"
@@ -193,6 +196,7 @@ class ModelRetrainer:
 
                 logger.info(f"Using default data path: {default_path}")
                 df = pd.read_csv(default_path)
+                logger.info(f"Loaded default data with shape: {df.shape}")
             X = df.drop("MedHouseVal", axis=1)
             y = df["MedHouseVal"]
 
@@ -216,31 +220,56 @@ class ModelRetrainer:
             # Train each candidate in parallel to speed up retraining
             def _train_one(name_model):
                 name, mdl = name_model
-                with mlflow.start_run(
-                    run_name=f"Retrain_{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                ) as run:
+                try:
+                    with mlflow.start_run(
+                        run_name=f"Retrain_{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    ) as run:
+                        mdl.fit(X_train, y_train)
+                        predictions = mdl.predict(X_test)
+
+                        mse = mean_squared_error(y_test, predictions)
+                        r2 = r2_score(y_test, predictions)
+
+                        mlflow.log_param("model_name", name)
+                        mlflow.log_param("retraining_type", "automated")
+                        mlflow.log_metric("mse", mse)
+                        mlflow.log_metric("r2_score", r2)
+
+                        signature = infer_signature(X_test, predictions)
+                        input_example = X_test.head(2)
+                        mlflow.sklearn.log_model(
+                            sk_model=mdl,
+                            name="model",
+                            input_example=input_example,
+                            signature=signature,
+                        )
+
+                        model_path = f"{self.models_dir}/{name}.pkl"
+                        joblib.dump(mdl, model_path)
+
+                        return (
+                            name,
+                            mdl,
+                            {
+                                "mse": mse,
+                                "r2_score": r2,
+                                "model_path": model_path,
+                                "run_id": run.info.run_id,
+                            },
+                        )
+                except Exception as e:
+                    logger.error(f"Error training {name} with MLflow: {e}")
+                    # Fallback: train without MLflow logging
+                    logger.info(f"Falling back to training {name} without MLflow logging")
                     mdl.fit(X_train, y_train)
                     predictions = mdl.predict(X_test)
-
+                    
                     mse = mean_squared_error(y_test, predictions)
                     r2 = r2_score(y_test, predictions)
-
-                    mlflow.log_param("model_name", name)
-                    mlflow.log_metric("mse", mse)
-                    mlflow.log_metric("r2_score", r2)
-
-                    signature = infer_signature(X_test, predictions)
-                    input_example = X_test.head(2)
-                    mlflow.sklearn.log_model(
-                        sk_model=mdl,
-                        name="model",
-                        input_example=input_example,
-                        signature=signature,
-                    )
-
+                    
                     model_path = f"{self.models_dir}/{name}.pkl"
                     joblib.dump(mdl, model_path)
-
+                    
                     return (
                         name,
                         mdl,
@@ -248,7 +277,7 @@ class ModelRetrainer:
                             "mse": mse,
                             "r2_score": r2,
                             "model_path": model_path,
-                            "run_id": run.info.run_id,
+                            "run_id": None,  # No MLflow run ID
                         },
                     )
 
@@ -273,13 +302,16 @@ class ModelRetrainer:
 
                 # Try to register best model in MLflow
                 try:
-                    registered = mlflow.register_model(
-                        model_uri=f"runs:/{results[best_name]['run_id']}/model",
-                        name="HousingPricePredictor",
-                    )
-                    logger.info(
-                        f"Registered HousingPricePredictor version {registered.version}"
-                    )
+                    if results[best_name].get('run_id'):
+                        registered = mlflow.register_model(
+                            model_uri=f"runs:/{results[best_name]['run_id']}/model",
+                            name="HousingPricePredictor",
+                        )
+                        logger.info(
+                            f"Registered HousingPricePredictor version {registered.version}"
+                        )
+                    else:
+                        logger.info("Skipping MLflow model registration (no run_id available)")
                 except Exception as e:
                     logger.warning(f"Model registry step skipped or failed: {e}")
 

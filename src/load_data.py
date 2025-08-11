@@ -25,9 +25,17 @@ def load_and_save():
     df_processed = pd.DataFrame(X_scaled, columns=X.columns)
     df_processed["MedHouseVal"] = y.reset_index(drop=True)
 
+    # Get the project root directory (parent of src directory)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(project_root, "data")
+    
+    # Create data directory if it doesn't exist
+    os.makedirs(data_dir, exist_ok=True)
+    
     # Save preprocessed data
-    df_processed.to_csv("data/housing.csv", index=False)
-    print("Preprocessed data saved to data/housing.csv")
+    output_path = os.path.join(data_dir, "housing.csv")
+    df_processed.to_csv(output_path, index=False)
+    print(f"Preprocessed data saved to {output_path}")
 
 
 if __name__ == "__main__":

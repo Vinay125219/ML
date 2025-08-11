@@ -132,18 +132,29 @@ class RetrainingScheduler:
             )
 
             # Run the retraining pipeline
-            results = run_retraining_pipeline()
+            try:
+                results = run_retraining_pipeline()
+                
+                self.last_run = start_time.isoformat()
+                self.last_results = results
 
-            self.last_run = start_time.isoformat()
-            self.last_results = results
-
-            logger.info("Retraining pipeline completed successfully")
-            return {
-                "status": "success",
-                "results": results,
-                "start_time": start_time.isoformat(),
-                "end_time": datetime.now().isoformat(),
-            }
+                logger.info("Retraining pipeline completed successfully")
+                return {
+                    "status": "success",
+                    "results": results,
+                    "start_time": start_time.isoformat(),
+                    "end_time": datetime.now().isoformat(),
+                }
+            except Exception as e:
+                logger.error(f"Retraining pipeline execution failed: {e}")
+                error_results = {
+                    "status": "failed",
+                    "error": str(e),
+                    "start_time": start_time.isoformat(),
+                    "end_time": datetime.now().isoformat(),
+                }
+                self.last_results = error_results
+                return error_results
 
         except Exception as e:
             logger.error(f"Retraining pipeline failed: {e}")

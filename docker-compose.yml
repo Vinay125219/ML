@@ -58,28 +58,7 @@ services:
       - mlops-network
     depends_on:
       - prometheus
-
-  # Model Retraining Service
-  retraining-service:
-    build: .
-    container_name: mlops-retraining
-    ports:
-      - "8002:8002"
-    volumes:
-      - ./models:/app/models
-      - ./data:/app/data
-      - ./housinglogs:/app/housinglogs
-      - ./mlruns:/app/mlruns
-      - shared_data:/app/shared
-    environment:
-      - PYTHONPATH=/app
-      - SHARED_DIR=/app/shared
-    command: python src/retraining_scheduler.py
-    networks:
-      - mlops-network
-    depends_on:
-      - housing-api
-
+      
   # MLflow Tracking Server
   mlflow:
     image: python:3.10-slim
