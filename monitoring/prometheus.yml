@@ -5,18 +5,37 @@ global:
 scrape_configs:
   - job_name: prometheus
     static_configs:
-      - targets: ["localhost:9090"]
+      - targets: ["prometheus:9090"]
+        labels:
+          service: "prometheus"
+          environment: "docker"
 
   - job_name: housing-api
     static_configs:
-      - targets: ["localhost:8000"]
+      - targets: ["housing-api:8000"]
+        labels:
+          service: "housing-api"
+          environment: "docker"
     metrics_path: /metrics
     scrape_interval: 10s
     scrape_timeout: 5s
 
   - job_name: mlflow
     static_configs:
-      - targets: ["localhost:5000"]
+      - targets: ["mlflow:5000"]
+        labels:
+          service: "mlflow"
+          environment: "docker"
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+        labels:
+          service: "grafana"
+          environment: "docker"
     metrics_path: /metrics
     scrape_interval: 30s
     scrape_timeout: 10s

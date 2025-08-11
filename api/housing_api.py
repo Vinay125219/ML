@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from typing import Optional, Dict, Any
 import pandas as pd
 import mlflow.pyfunc
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
 import logging
 from datetime import datetime
 import sqlite3
@@ -73,6 +75,12 @@ MLOPS_DB_SIZE = Gauge(
     "mlops_database_size_bytes", "Size of SQLite DB file in bytes", ["service"]
 )
 
+MLOPS_MODEL_ACCURACY = Gauge(
+    "mlops_model_accuracy",
+    "Current model accuracy score",
+    ["service", "model", "metric_type"],
+)
+
 
 def _update_gauges():
     try:
@@ -94,6 +102,25 @@ def _update_gauges():
 # model = mlflow.pyfunc.load_model(model_uri)
 
 model = joblib.load("models/DecisionTree.pkl")
+
+# Calculate and update model metrics
+df = pd.read_csv("data/housing.csv")
+X = df.drop("MedHouseVal", axis=1)
+y = df["MedHouseVal"]
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+model_preds = model.predict(X_test)
+model_r2 = r2_score(y_test, model_preds)
+model_mse = mean_squared_error(y_test, model_preds)
+
+# Update Prometheus metrics for model accuracy
+MLOPS_MODEL_ACCURACY.labels(
+    service=SERVICE, model="DecisionTree", metric_type="r2_score"
+).set(model_r2)
+MLOPS_MODEL_ACCURACY.labels(
+    service=SERVICE, model="DecisionTree", metric_type="mse"
+).set(model_mse)
 
 logging.basicConfig(
     filename="housinglogs/predictions.log",
@@ -582,8 +609,6 @@ def run_model_retraining(
                         logging.info("Updated housing example payload after retraining")
                     except Exception as e:
                         logging.warning(f"Could not update example payload: {e}")
-
-
 
             except Exception as e:
                 results["results"][model_name] = {"status": "failed", "error": str(e)}

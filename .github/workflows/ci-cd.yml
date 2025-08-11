@@ -239,4 +239,4 @@ jobs:
           name: deployment-scripts
           path: |
             deploy.sh
-            docker-compose.monitoring.yml
+            docker-compose.yml
